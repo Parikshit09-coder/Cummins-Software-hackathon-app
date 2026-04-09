@@ -1,71 +1,85 @@
-  name: MERN CI/CD to ArgoCD
+name: MERN CI/CD to ArgoCD
 
-  on:
-    pull_request:
-      branches:
-        - staging 
+on:
+  pull_request:
+    branches:
+      - staging 
 
-  env:
-    # Your Docker Hub Repos
-    FRONTEND_IMAGE: rohitg2304/cummins-frontend
-    BACKEND_IMAGE: rohitg2304/cummins-backend
-    IMAGE_TAG: pr-${{ github.event.pull_request.number }}-${{ github.sha }} 
-    # Your Manifest Repo
-    MANIFEST_REPO: Parikshit09-coder/Cummins-Software-hackathon-k8s
+env:
+  # Your Docker Hub Repos
+  FRONTEND_IMAGE: rohitg2304/cummins-frontend
+  BACKEND_IMAGE: rohitg2304/cummins-backend
+  IMAGE_TAG: pr-${{ github.event.pull_request.number }}-${{ github.sha }} 
+  # Your Manifest Repo
+  MANIFEST_REPO: Parikshit09-coder/Cummins-Software-hackathon-k8s
 
-  jobs:
-    test-and-build:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout Code
-          uses: actions/checkout@v4
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
         
-        - name: Setup Node.js
-          uses: actions/setup-node@v4
-          with:
-            node-version: '20'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-        # Add your test commands here (npm ci && npm test)
+      # Add your test commands here (npm ci && npm test)
 
-        - name: Log in to Docker Hub
-          uses: docker/login-action@v3
-          with:
-            username: ${{ secrets.DOCKER_USERNAME }}
-            password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-        - name: Build and Push Images
-          uses: docker/build-push-action@v5
-          with:
-            context: .
-            push: true
-            tags: |
-              ${{ env.FRONTEND_IMAGE }}:${{ env.IMAGE_TAG }}
-              ${{ env.BACKEND_IMAGE }}:${{ env.IMAGE_TAG }}
+      # ---------------------------------------------
+      # BACKEND BUILD
+      # ---------------------------------------------
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend             # Points to backend folder
+          file: ./backend/Dockerfile     # Points to backend Dockerfile
+          push: true
+          tags: ${{ env.BACKEND_IMAGE }}:${{ env.IMAGE_TAG }}
 
-    update-manifest:
-      needs: test-and-build
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout Manifest Repository
-          uses: actions/checkout@v4
-          with:
-            repository: ${{ env.MANIFEST_REPO }}
-            token: ${{ secrets.GITOPS_PAT }} # Must be a Personal Access Token with repo scope
-            path: manifests
+      # ---------------------------------------------
+      # FRONTEND BUILD
+      # ---------------------------------------------
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend            # Points to frontend folder
+          file: ./frontend/Dockerfile    # Points to frontend Dockerfile
+          push: true
+          tags: ${{ env.FRONTEND_IMAGE }}:${{ env.IMAGE_TAG }}
 
-        - name: Update Kubernetes YAMLs
-          working-directory: manifests
-          run: |
-            # This assumes your YAMLs are in the root or a 'k8s' folder 
-            # It searches for the image name and replaces the tag
-            sed -i "s|image: ${{ env.BACKEND_IMAGE }}:.*|image: ${{ env.BACKEND_IMAGE }}:${{ env.IMAGE_TAG }}|g" deployment.yaml || true
-            sed -i "s|image: ${{ env.FRONTEND_IMAGE }}:.*|image: ${{ env.FRONTEND_IMAGE }}:${{ env.IMAGE_TAG }}|g" deployment.yaml || true
+  update-manifest:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Manifest Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.MANIFEST_REPO }}
+          token: ${{ secrets.GITOPS_PAT }} # Must be a Personal Access Token with repo scope
+          path: manifests
 
-        - name: Commit to Manifest Repo
-          working-directory: manifests
-          run: |
-            git config user.name "GitOps Bot"
-            git config user.email "gitops@cummins-hackathon.local"
-            git add .
-            git commit -m "chore: update images to ${{ env.IMAGE_TAG }} for PR #${{ github.event.pull_request.number }}"
-            git push origin main
+      - name: Update Kubernetes YAMLs
+        working-directory: manifests
+        run: |
+          # This searches for the image name and replaces the tag
+          # Note: If your yaml files have a different name (like frontend-deployment.yaml), 
+          # change "deployment.yaml" below to match your actual file names, or use "*.yaml"
+          sed -i "s|image: ${{ env.BACKEND_IMAGE }}:.*|image: ${{ env.BACKEND_IMAGE }}:${{ env.IMAGE_TAG }}|g" deployment.yaml || true
+          sed -i "s|image: ${{ env.FRONTEND_IMAGE }}:.*|image: ${{ env.FRONTEND_IMAGE }}:${{ env.IMAGE_TAG }}|g" deployment.yaml || true
+
+      - name: Commit to Manifest Repo
+        working-directory: manifests
+        run: |
+          git config user.name "GitOps Bot"
+          git config user.email "gitops@cummins-hackathon.local"
+          git add .
+          git commit -m "chore: update images to ${{ env.IMAGE_TAG }} for PR #${{ github.event.pull_request.number }}"
+          git push origin main
