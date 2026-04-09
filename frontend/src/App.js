@@ -9,7 +9,7 @@ function App() {
         <div className="editorial-header">
           <span className="editorial-tagline">Edition 2024 Inventory</span>
           <h1 className="section-title">The Archive</h1>
-          <p>A curated repository of heritage goods and contemporary artifacts.</p>
+          <p>A curated repository of heritage goods and contemporary artifacts and do it all.</p>
         </div>
       </header>
       <main>
