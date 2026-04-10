@@ -12,8 +12,12 @@ app.use(express.json());
 
 app.use("/api/products", require("./routes/productRoutes"));
 app.use("/api/logs", require("./routes/logRoutes"));
+app.use("/api/chaos", require("./routes/chaosRoutes"));
 
 app.get("/health", (req, res) => {
+  if (global.isHealthy === false) {
+    return res.status(500).json({ status: "FAIL", message: "Simulated health failure" });
+  }
   res.json({ status: "OK" });
 });
 
