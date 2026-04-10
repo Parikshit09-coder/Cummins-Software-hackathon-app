@@ -7,7 +7,8 @@ router.post("/", async (req, res) => {
   try {
     const log = await Log.create(req.body);
 
-    console.log("📊 STORED LOG:", log);
+    // Log a clean string with just the important bits
+    console.log(`📊 STORED LOG: [${log.alert_type}] ${log.message}`);
 
     // SIMPLE INCIDENT DETECTION
     if (log.alert_type === "api_failure") {

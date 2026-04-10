@@ -1,5 +1,6 @@
 import React from "react";
 import ProductList from "./components/ProductList";
+import ChaosPanel from "./components/ChaosPanel";
 import "./index.css";
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
       </header>
       <main>
         <ProductList />
+        <ChaosPanel />
       </main>
       <footer>
         <p>© 2024 The Archive Digital Curatorial Suite. All Rights Reserved.</p>
